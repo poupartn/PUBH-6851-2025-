@@ -1,27 +1,297 @@
 ---
-title: "HW 5"
-author: "Natalie Poupart"
-format: html
-editor: visual
+title: HW 5
+author:
+  - name: Natalie Poupart
+title-block-banner: true
+caption-icon: false
+fig-cap-location: top
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    code-line-numbers: true
+    code-copy: true
+    embed-resources: true
+    theme: Cowie Blue
 ---
 
-## Quarto
+## Introduction
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+In this notebook I will combine the materials from all 5 sessions of class to create a complete analysis of a dataset. I will use the "sleep duration" data set that compares sleep duration to having a tv in one's bedroom and smartphone use for teenagers.
 
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+## Read in libraries
 
 ```{r}
-1 + 1
+library(readr)
+library(psych)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(plotly)
+library(ggstatsplot)
+library(vcd)
+library(epitools)
+library(lmtest)
+library(dplyr)
+
 ```
 
-You can add options to executable code like this
+## Read in data
 
 ```{r}
-#| echo: false
-2 * 2
+
+setwd(getwd())
+sleep <- readr::read_csv("sleep_duration.csv")
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+## Data Dictionary
+
+We have $4$ variables, one in each column of the data set in accordance with the principles of tidy data.
+
+The properties of the variables are tabled below.
+
+| Variable              | Explanation              | Properties        |
+|-----------------------|--------------------------|-------------------|
+| $\texttt{sleep}$      | Hours of sleep per night | hours             |
+| $\texttt{age}$        | Age of participant       | years             |
+| $\texttt{tv}$         | TV in Bedroom            | 0 if no and 1 yes |
+| $\texttt{smartphone}$ | Smartphone before bed    | 0 if no and 1 yes |
+
+## Explore data
+
+```{r}
+head(sleep)
+summary(sleep)
+```
+
+## Summary Statistics
+
+```{r}
+describe(sleep)
+
+```
+
+## Research questions
+
+### Primary research question
+
+Are $\texttt{tv}$ and $\texttt{smartphone}$ associated with $\texttt{sleep}$?
+
+### Describe
+
+```{r}
+psych::describe(sleep$sleep)
+```
+
+The average number of hours of sleep per night is 7.88 with a standard deviation of 1.27. The median number of hours of sleep a night is 7.8. The minimum number of hours of sleep per night is 5.2 and the maximum is 10.8
+
+### Update labels of categorical variables
+
+```{r}
+sleep <- sleep %>%
+  mutate(
+    tv = factor(tv, levels = c(0, 1), labels = c("No", "Yes")),
+    smartphone = factor(smartphone, levels = c(0, 1), labels = c("No", "Yes"))
+  )
+```
+
+### Descriptive stats for sleep by the 2 groups
+
+```{r}
+psych::describeBy(
+  sleep$sleep,
+  group =sleep$tv
+)
+```
+
+```{r}
+psych::describeBy(
+  sleep$sleep,
+  group =sleep$smartphone
+)
+```
+
+## Data Visualization
+
+```{r}
+sleep_tv <- (sleep %>% ggplot2::ggplot(
+  aes(
+    x = tv,
+    y = sleep
+  )
+) +
+  ggplot2::geom_boxplot(
+    aes(
+      fill = tv
+    ),
+    show.legend = FALSE
+  ) +
+  ggplot2::labs(
+    title = "Distribution of Sleep Hours",
+    subtitle = "Comparison between TV and no TV in room"
+  ) +
+  ggplot2::scale_fill_brewer(
+    palette = "Set1",
+    direction = -1
+  ) +
+  ggplot2::xlab("TV in Room") +
+  ggplot2::ylab("Sleep Duration") +
+  ggthemes::theme_clean());
+
+plotly::ggplotly(sleep_tv)
+```
+
+```{r}
+sleep_phone <- (sleep %>% ggplot2::ggplot(
+  aes(
+    x = smartphone,
+    y = sleep
+  )
+) +
+  ggplot2::geom_boxplot(
+    aes(
+      fill = smartphone
+    ),
+    show.legend = FALSE
+  ) +
+  ggplot2::labs(
+    title = "Distribution of Sleep Hours",
+    subtitle = "Comparison between Phone Use Before Bed and No Phone Use Before Bed"
+  ) +
+  ggplot2::scale_fill_brewer(
+    palette = "Set1",
+    direction = -1
+  ) +
+  ggplot2::xlab("Phone Use Before Bed") +
+  ggplot2::ylab("Sleep Duration") +
+  ggthemes::theme_clean());
+
+plotly::ggplotly(sleep_phone)
+
+
+
+
+```
+
+```{r}
+vcd::mosaic(
+  ~ tv + smartphone,
+  data = sleep,
+  highlighting = "tv",
+  highlighting_fill = c("skyblue", "lightyellow"),
+  main = "Mosaic plot of binary TV and Smartphone"
+)
+```
+
+## Inferential Statistics
+
+Comparing a continuous variable between two groups can be conducted using a t test or a Mann-Whitney-U test. We use the latter non-parametric test if the assumptions for the use parametric tests are not met.
+
+The assumptions are (1) normality and (2)Equality of Variances
+
+### Normality
+
+Here, we will use the Shapiro-Wilk test to determine if the continuous variable is from a population in which the values are normally distributed. Under the null hypothesis for this test, the variable can be described by a normal distribution. We will set a level of significance of $\alpha=0.05$ throughout.
+
+Below, we use the `filter` and `selec`t verbs from the dplyr library and the the `pull` function that returns a vector of values. We use a pipeline to pipe the vector to the `shapiro.wilk` function. We start with the sleep duration of those without a TV in their room.
+
+
+```{r}
+sleep %>% 
+  filter(tv == "No") %>% 
+  select(sleep) %>% 
+  pull() %>% 
+  shapiro.test()
+```
+
+Now with a TV
+
+```{r}
+sleep %>% 
+  filter(tv == "Yes") %>% 
+  select(sleep) %>% 
+  pull() %>% 
+  shapiro.test()
+```
+
+In both cases, we fail to reject the null hypothesis. We can state that the variable is normally distributed in the population.
+
+
+Now we will check the normality of sleep duration for those who use a smartphone before bed.
+
+
+```{r}
+sleep %>% 
+  filter(smartphone == "No") %>% 
+  select(sleep) %>% 
+  pull() %>% 
+  shapiro.test()
+```
+
+```{r}
+
+sleep %>% 
+  filter(smartphone == "Yes") %>% 
+  select(sleep) %>% 
+  pull() %>% 
+  shapiro.test()
+```
+
+Again, in both cases, we fail to reject the null hypothesis. We can state that the variable is normally distributed in the population.
+
+
+
+### Equality of Variances
+
+The other test that we will perform, is Bartlett’s test. The null hypothesis is that we have equal variance for the continuous variable comparing the two groups. The `bartlett.test` function performs this test.
+
+First, we will test TV in room
+
+```{r}
+bartlett.test(
+  sleep$sleep, 
+  sleep$tv 
+)
+```
+Next, we will test smartphone use before bed
+
+```{r}
+bartlett.test(
+  sleep$sleep, 
+  sleep$smartphone 
+)
+```
+In both cases, we fail to reject the null hypothesis and can use an equal variance t test. This test is performed using the `t.test` function
+
+
+### Is there a difference in average sleep duration between those with and without a TV in their bedroom?
+
+
+```{r}
+t.test(
+  formula = sleep ~ tv,
+  data = sleep,
+  alternative = "two.sided", 
+  var.equal = TRUE 
+)
+```
+We reject the null hypothesis that the mean number of hours of sleep per night is the same for those with a TV in their room and those without. The mean number of hours of sleep per night is significantly lower for those with a TV in their room (mean = 7.28) compared to those without a TV in their room (mean = 8.32) with p = 0.003.
+
+We conclude that there is enough evidence in the data at the $\alpha=0.05$ level of significance to state that there is a difference between the sleep duration of teenagers with and without a TV in their bedroom.
+
+### Is there a difference in average sleep duration between those who have smartphone use before bed?
+
+
+```{r}
+t.test(
+  formula = sleep ~ smartphone,
+  data = sleep,
+  alternative = "two.sided", 
+  var.equal = TRUE 
+)
+```
+
+We fail to reject the null hypothesis that the mean number of hours of sleep per night is the same for those with smartphone use before bed and those without. The mean number of hours of sleep per night is not significantly lower for who use a smartphone before bed (mean = 7.54) compared to those who do not use a smartphone before bed (mean = 8.08) with p = .1577
+
+We conclude that there is not enough evidence in the data at the $\alpha=0.05$ level of significance to state that there is a difference between the sleep duration of teenagers who do and don't use a smartphone before bed.
