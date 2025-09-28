@@ -18,7 +18,7 @@ format:
 
 ## Introduction
 
-In this notebook I will combine the materials from all 5 sessions of class to create a complete analysis of a dataset. I will use the "sleep duration" data set that compares sleep duration to having a tv in one's bedroom and smartphone use for teenagers.
+In this notebook I will combine the materials from all 5 sessions of class to create a complete analysis of a data set. I will use the "sleep duration" data set that compares sleep duration to having a tv in one's bedroom and smartphone use before bed for teenagers.
 
 ## Read in libraries
 
@@ -131,9 +131,8 @@ sleep_tv <- (sleep %>% ggplot2::ggplot(
     title = "Distribution of Sleep Hours",
     subtitle = "Comparison between TV and no TV in room"
   ) +
-  ggplot2::scale_fill_brewer(
-    palette = "Set1",
-    direction = -1
+  ggplot2::scale_fill_manual(
+    values = c("Yes" = "#17becf", "No" = "#e377c2")
   ) +
   ggplot2::xlab("TV in Room") +
   ggplot2::ylab("Sleep Duration") +
@@ -159,9 +158,8 @@ sleep_phone <- (sleep %>% ggplot2::ggplot(
     title = "Distribution of Sleep Hours",
     subtitle = "Comparison between Phone Use Before Bed and No Phone Use Before Bed"
   ) +
-  ggplot2::scale_fill_brewer(
-    palette = "Set1",
-    direction = -1
+  ggplot2::scale_fill_manual(
+    values = c("Yes" = "#17becf", "No" = "#e377c2")
   ) +
   ggplot2::xlab("Phone Use Before Bed") +
   ggplot2::ylab("Sleep Duration") +
@@ -186,16 +184,15 @@ vcd::mosaic(
 
 ## Inferential Statistics
 
-Comparing a continuous variable between two groups can be conducted using a t test or a Mann-Whitney-U test. We use the latter non-parametric test if the assumptions for the use parametric tests are not met.
+Comparing a continuous variable between two groups can be conducted using a t test if the assumptions for the use parametric tests are met.
 
-The assumptions are (1) normality and (2)Equality of Variances
+The assumptions are (1) normality and (2) Equality of Variances
 
 ### Normality
 
 Here, we will use the Shapiro-Wilk test to determine if the continuous variable is from a population in which the values are normally distributed. Under the null hypothesis for this test, the variable can be described by a normal distribution. We will set a level of significance of $\alpha=0.05$ throughout.
 
 Below, we use the `filter` and `selec`t verbs from the dplyr library and the the `pull` function that returns a vector of values. We use a pipeline to pipe the vector to the `shapiro.wilk` function. We start with the sleep duration of those without a TV in their room.
-
 
 ```{r}
 sleep %>% 
@@ -217,9 +214,7 @@ sleep %>%
 
 In both cases, we fail to reject the null hypothesis. We can state that the variable is normally distributed in the population.
 
-
 Now we will check the normality of sleep duration for those who use a smartphone before bed.
-
 
 ```{r}
 sleep %>% 
@@ -240,8 +235,6 @@ sleep %>%
 
 Again, in both cases, we fail to reject the null hypothesis. We can state that the variable is normally distributed in the population.
 
-
-
 ### Equality of Variances
 
 The other test that we will perform, is Bartlett’s test. The null hypothesis is that we have equal variance for the continuous variable comparing the two groups. The `bartlett.test` function performs this test.
@@ -254,6 +247,7 @@ bartlett.test(
   sleep$tv 
 )
 ```
+
 Next, we will test smartphone use before bed
 
 ```{r}
@@ -262,11 +256,12 @@ bartlett.test(
   sleep$smartphone 
 )
 ```
+
 In both cases, we fail to reject the null hypothesis and can use an equal variance t test. This test is performed using the `t.test` function
 
+## Statistical Analysis
 
 ### Is there a difference in average sleep duration between those with and without a TV in their bedroom?
-
 
 ```{r}
 t.test(
@@ -276,12 +271,12 @@ t.test(
   var.equal = TRUE 
 )
 ```
+
 We reject the null hypothesis that the mean number of hours of sleep per night is the same for those with a TV in their room and those without. The mean number of hours of sleep per night is significantly lower for those with a TV in their room (mean = 7.28) compared to those without a TV in their room (mean = 8.32) with p = 0.003.
 
 We conclude that there is enough evidence in the data at the $\alpha=0.05$ level of significance to state that there is a difference between the sleep duration of teenagers with and without a TV in their bedroom.
 
 ### Is there a difference in average sleep duration between those who have smartphone use before bed?
-
 
 ```{r}
 t.test(
